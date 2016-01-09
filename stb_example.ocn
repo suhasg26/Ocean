@@ -1,0 +1,109 @@
+% initial information on design and PDK
+
+
+analysis('stb ?start "1"  ?stop "10G"  ?dec "20"  ?probe "/I18/vinj"  ?stbProbeMode "differential"  ?annotate "status"  )
+
+load("abDumpWaveform.il")
+load("abVarval.il")
+
+;desVar(	  "ugb" 20e6	)
+;desVar(  "PM" 60	)
+desVar(	  "Rin" 5k	)
+desVar(	  "Vin" 200m	)
+desVar(	  "fin" 1k	)
+desVar(	  "va" 1.2	)
+desVar(	  "R" 5k	)
+desVar(	  "gm" 100m	)
+envOption(
+	'pllWizardinfo  "" 
+	'vcoType  "" 
+	'pllPlugin  "" 
+	'firstRun  nil 
+	'enableArclength  nil 
+	'cmd64bit  nil 
+	'restart  "" 
+	'savestate  "" 
+	'spp  "" 
+	'autoDisplay  t 
+	'userCmdLineOption  "" 
+	'analysisOrder  nil 
+	'paramRangeCheckFile  "" 
+)
+option(	'reltol  "1e-5" 
+	'vabstol  "1e-6" 
+	'iabstol  "1e-12" 
+	'temp  "27" 
+	'tnom  "27" 
+	'scalem  "1.0" 
+	'scale  "1.0" 
+	'gmin  "1e-12" 
+	'rforce  "1" 
+	'maxnotes  "5" 
+	'maxwarns  "5" 
+	'digits  "5" 
+	'cols  "80" 
+	'pivrel  "1e-3" 
+	'sensfile  "../psf/sens.output" 
+	'checklimitdest  "psf" 
+)
+saveOption('save "all" )
+saveOption( 'pwr "" )
+saveOption( 'nestlvl "2" )
+saveOption( 'currents "nonlinear" )
+saveOption( 'subcktprobelvl "2" )
+saveOption( 'useprobes "yes" )
+saveOption( ?saveahdlvars "" )
+saveOption( ?modelParamInfo t )
+saveOption( ?elementInfo t )
+saveOption( ?outputParamInfo t )
+temp( 27 ) 
+
+
+saveDir = "./RESULTS_OCN/"
+cellName = "GM_OTA/"
+analy = "STB/"
+UGB="UGB/"
+folder_level01 = saveDir
+folder_level02 = strcat(folder_level01 cellName)
+folder_level03 = strcat(folder_level02 analy)
+folder_level04 = strcat(folder_level03 UGB)
+createDir(folder_level01) 
+createDir(folder_level02)
+createDir(folder_level03)
+createDir(folder_level04)
+
+ugb_list = list(5e6 20e6 50e6 200e6)
+pm = list(30 45 60 70)
+
+foreach(val_ugb ugb_list
+
+folder_level05 = strcat(folder_level04 sprintf(nil "%.0fM/" val_ugb*1e-6))
+createDir(folder_level05)
+
+foreach(val pm
+
+desVar("ugb" val_ugb)
+desVar("PM" val)
+run()
+
+folderDir = strcat("PM_" sprintf(nil "%d" val)) 
+folder_level06 = strcat(folder_level05 folderDir)
+createDir(folder_level06)
+;file_gain = outfile(strcat(folder_level06 "/gain.txt"))
+;file_phase = outfile(strcat(folder_level06 "/phase.txt"))
+file_pm = outfile(strcat(folder_level06 "/pm.txt"))
+
+selectResult( 'stb )
+
+abDumpWaveform(db(mag(getData("loopGain" ?result "stb"))) strcat(folder_level06 "/gain.txt"))
+abDumpWaveform(phaseDegUnwrapped(getData("loopGain" ?result "stb")) strcat(folder_level06 "/phase.txt"))
+ugb1=cross(db(mag(getData("loopGain" ?result "stb"))) 0 1 "falling" nil nil)
+PhMa = value(phaseDegUnwrapped(getData("loopGain" ?result "stb")) cross(db(mag(getData("loopGain" ?result "stb"))) 0 1 "falling" nil nil))
+fprintf(file_pm, "\n Target_PM=%d\n Resulted_PM=%8.2f\n Target_UGB=%8.2f\n Resulted_UGB=%8.2f\n",val,PhMa,val_ugb,ugb1)
+
+close(file_gain)
+close(file_phase)
+close(file_pm)
+)
+)
+
